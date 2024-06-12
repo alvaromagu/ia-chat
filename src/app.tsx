@@ -3,17 +3,18 @@ import { CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
 
 type Message = {
   id: string
-  role: 'user' | 'system'
+  role: 'user' | 'assistant'
   content: string
 }
 
 const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
+const storedMessages = JSON.parse(localStorage.getItem('messages') ?? '[]') as Message[]
 
 function App() {
   const listRef = useRef<HTMLUListElement>(null)
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
   const [progress, setProgress] = useState('')
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(storedMessages)
 
   useEffect(() => {
     const worker = new Worker(
@@ -44,6 +45,7 @@ function App() {
     if (listRef.current != null) {
       listRef.current.scrollTo({ top: listRef.current.scrollHeight })
     }
+    localStorage.setItem('messages', JSON.stringify(messages))
   }, [messages])
 
   const handleSubmit = useCallback(async (evt: FormEvent) => {
@@ -68,14 +70,17 @@ function App() {
     ])
     const chunks = await engine.chat.completions.create({
       messages: [
-        { role: 'system', content: 'You are a helpful AI assistant.' },
+        { role: 'system', content: 'You are a helpful AI assistant. You answer in the language in which the question is written' },
+        ...messages.map(msg => {
+          return { role: msg.role, content: msg.content }
+        }),
         { role: 'user', content: message }
       ],
       stream: true
     })
     const replyId = crypto.randomUUID()
     setMessages(prev => {
-      return [...prev, { id: replyId, role: 'system', content: '...' }]
+      return [...prev, { id: replyId, role: 'assistant', content: '...' }]
     })
     let replyContent = ''
     for await (const chunk of chunks) {
