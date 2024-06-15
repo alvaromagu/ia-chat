@@ -5,7 +5,14 @@ export default {
     './src/**/*.{js,ts,jsx,tsx}'
   ],
   theme: {
-    extend: {}
+    extend: {
+      backgroundColor: {
+        dracula: '#282a36'
+      },
+      fontFamily: {
+        'onest': 'Onest'
+      }
+    }
   },
   plugins: []
 }

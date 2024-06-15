@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: 'Onest';
+  src: url(/onest.ttf);
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url(/jetbrainsmono.ttf);
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+code {
+  font-family: 'JetBrains Mono';
+}
+
+@layer utilities {
+  .field-content {
+    field-sizing: content;
+  }
+}
