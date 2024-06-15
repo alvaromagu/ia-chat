@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, Suspense, lazy, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ChatCompletionMessageParam, CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
 import { dracula } from './dracula'
+import { systemMessage } from './system'
 
 type Message = ChatCompletionMessageParam & { id: string }
 const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
@@ -63,7 +64,7 @@ function App() {
     ])
     const chunks = await engine.chat.completions.create({
       messages: [
-        { role: 'system', content: 'You are a helpful AI assistant. You answer in the language in which the question is written.' },
+        systemMessage,
         ...messages,
         { role: 'user', content: message }
       ],
