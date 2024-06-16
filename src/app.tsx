@@ -1,14 +1,13 @@
-import { FormEvent, ReactNode, Suspense, lazy, memo, useCallback, useEffect, useRef, useState } from 'react'
+import { FormEvent, ReactNode, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ChatCompletionMessageParam, CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { dracula } from './dracula'
 import { systemMessage } from './system'
 
 type Message = ChatCompletionMessageParam & { id: string }
 const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
 const storedMessages = JSON.parse(localStorage.getItem('messages') ?? '[]') as Message[]
-
-const LazyMarkdown = lazy(() => import('react-markdown'))
-const LazySyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(mod => ({ default: mod.Prism })))
 
 type CompatibilityCheck = { compatible: true } | { compatible: false, message: string }
 
@@ -41,7 +40,7 @@ async function checkCompatibility(): Promise<CompatibilityCheck>{
 
 function App() {
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
-  const [progress, setProgress] = useState('')
+  const [progress, setProgress] = useState('-')
   const [messages, setMessages] = useState<Message[]>(storedMessages)
 
   useEffect(() => {
@@ -63,6 +62,7 @@ function App() {
         model,
         {
           initProgressCallback: (initProgress) => {
+            console.log(initProgress)
             setProgress(initProgress.text)
           }
         }
@@ -187,8 +187,8 @@ const Chat = memo(function Chat ({ messages}: { messages: Message[] }) {
   const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
-    if (listRef.current != null) {
-      listRef.current.scrollTo({ top: listRef.current.scrollHeight })
+    if (listRef.current != null) {      
+      listRef.current.scrollTo(0, listRef.current.scrollHeight)
     }
     localStorage.setItem('messages', JSON.stringify(messages))
   }, [messages])
@@ -251,35 +251,34 @@ const MessageContent = memo(function MessageContent ({
 
   if (typeof content === 'string') {
     return (
-      <Suspense fallback={<SimpleMessageContent className={pClassName} content={content} />}>
-        <LazyMarkdown
-          className={pClassName}
-          components={{
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            code ({className, children, node, ref, ...props}) {
-              const match = /language-(\w+)/.exec(className || '')
-              return (
-                match == null 
-                  ?
-                    <InlineCode>
-                      {children}
-                    </InlineCode>
-                  : 
-                    <LazySyntaxHighlighter
-                      style={dracula}
-                      language={match ? match[1] : ''}
-                      PreTag='div'
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </LazySyntaxHighlighter>
-              )
-            }
-          }}
-        >
-          {content}
-        </LazyMarkdown>
-      </Suspense>
+      <ReactMarkdown
+        className={pClassName}
+        components={{
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          code ({className, children, node, ref, ...props}) {
+            const match = /language-(\w+)/.exec(className || '')
+            return (
+              match == null 
+                ?
+                  <InlineCode>
+                    {children}
+                  </InlineCode>
+                : 
+                  <SyntaxHighlighter
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    style={dracula as any}
+                    language={match ? match[1] : ''}
+                    PreTag='div'
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+            )
+          }
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     )
   }
 
@@ -310,18 +309,6 @@ function InlineCode({
     <code className='bg-dracula rounded-md p-1 whitespace-normal'>
       {children}
     </code>
-  )
-}
-
-function SimpleMessageContent ({
-  content,
-  className
-}: {
-  content: string
-  className: string
-}) {
-  return (
-    <p className={className}>{content}</p>
   )
 }
 

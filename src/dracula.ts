@@ -1,11 +1,7 @@
+import { CSSProperties } from 'react'
 import { dracula as baseDracula } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 
-// remove font family from next keys:
-// 'code[class*=\"language-\"]'
-// 'pre[class*=\"language-\"]'
-export const dracula: {
-  [key: string]: React.CSSProperties
-} = {
+export const dracula: { [key: string]: CSSProperties; } = {
   ...baseDracula,
   'code[class*="language-"]': {
     ...baseDracula['code[class*="language-"]'],
