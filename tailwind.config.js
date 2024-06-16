@@ -7,7 +7,8 @@ export default {
   theme: {
     extend: {
       backgroundColor: {
-        dracula: '#282a36'
+        dracula: '#282a36',
+        oneLight: 'rgb(250, 250, 250)'
       },
       fontFamily: {
         'onest': 'Onest'
