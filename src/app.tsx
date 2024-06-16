@@ -24,14 +24,14 @@ async function checkCompatibility(): Promise<CompatibilityCheck>{
   if (adapter == null) {
     return {
       compatible: false,
-      message: 'No adapter found'
+      message: 'No GPU adapter found'
     }
   }
   const device = await adapter.requestDevice()
   if (device == null) {
     return {
       compatible: false,
-      message: 'No device found'
+      message: 'No GPU device found'
     }
   }
   return {
