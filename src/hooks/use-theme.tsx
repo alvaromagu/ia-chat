@@ -1,5 +1,5 @@
 import { CSSProperties, createContext, useContext, useEffect, useState } from 'react'
-import { dark, light } from './syntax-hightlighter-theme'
+import { dark, light } from '../constants/syntax-hightlighter-theme'
 
 type Theme = 'dark' | 'light'
 
@@ -49,4 +49,3 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useTheme()
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
 }
-
