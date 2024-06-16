@@ -10,19 +10,54 @@ const storedMessages = JSON.parse(localStorage.getItem('messages') ?? '[]') as M
 const LazyMarkdown = lazy(() => import('react-markdown'))
 const LazySyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(mod => ({ default: mod.Prism })))
 
+type CompatibilityCheck = { compatible: true } | { compatible: false, message: string }
+
+// check compatibility of WebGPU API
+async function checkCompatibility(): Promise<CompatibilityCheck>{
+  if (navigator.gpu == null) {
+    return {
+      compatible: false,
+      message: 'WebGPU not supported'
+    }
+  }
+  const adapter = await navigator.gpu.requestAdapter()
+  if (adapter == null) {
+    return {
+      compatible: false,
+      message: 'No adapter found'
+    }
+  }
+  const device = await adapter.requestDevice()
+  if (device == null) {
+    return {
+      compatible: false,
+      message: 'No device found'
+    }
+  }
+  return {
+    compatible: true
+  }
+}
+
 function App() {
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
   const [progress, setProgress] = useState('')
   const [messages, setMessages] = useState<Message[]>(storedMessages)
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL('./worker.ts', import.meta.url),
-      {
-        type: 'module'
-      }
-    );
+    let worker: Worker
     (async function () {
+      const compatibility = await checkCompatibility()
+      if (!compatibility.compatible) {
+        setProgress(compatibility.message)
+        return alert(compatibility.message)
+      }
+      worker = new Worker(
+        new URL('./worker.ts', import.meta.url),
+        {
+          type: 'module'
+        }
+      )
       const engine = await CreateWebWorkerMLCEngine(
         worker,
         model,
@@ -34,9 +69,8 @@ function App() {
       )
       setEngine(engine)
     })()
-
     return () => {
-      worker.terminate()
+      worker?.terminate()
       setEngine(null)
     }
   }, [])
