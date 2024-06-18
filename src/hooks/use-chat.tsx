@@ -36,6 +36,7 @@ async function checkCompatibility(): Promise<CompatibilityCheck>{
 }
 
 function useChat () {
+  const [asideOpen, setAsideOpen] = useState(true)
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
   const [progress, setProgress] = useState('-')
   const [messages, setMessages] = useState<Message[]>(storedMessages)
@@ -117,7 +118,7 @@ function useChat () {
     }
   }, [engine, messages])
 
-  return { messages, progress, handleSubmit }
+  return { messages, progress, asideOpen, handleSubmit, setAsideOpen }
 }
 
 type ChatState = ReturnType<typeof useChat>

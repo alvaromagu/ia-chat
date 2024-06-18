@@ -5,7 +5,7 @@ export function ChatFooter () {
 
   return (
   <footer>
-    <form className='flex gap-2' onSubmit={handleSubmit}>
+    <form className='flex gap-2 py-2 px-2 max-w-3xl m-auto' onSubmit={handleSubmit}>
       <textarea
         name='message'
         className='w-full bg-slate-300 dark:bg-zinc-800 p-2 rounded resize-none field-content max-h-20'

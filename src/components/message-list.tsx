@@ -16,7 +16,7 @@ export const MessageList = memo(function MessageList () {
   return (
     <ul 
       ref={listRef}
-      className='bg-slate-200 dark:bg-zinc-900 flex flex-col flex-1 overflow-y-auto rounded p-2 gap-4 scroll-smooth'
+      className='flex flex-col flex-1 overflow-auto rounded p-2 gap-4 scroll-smooth'
     >
       {messages.map((message) => {
         return (
