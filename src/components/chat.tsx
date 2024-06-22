@@ -8,10 +8,8 @@ export function Chat () {
 
   useEffect(() => {
     if (!asideOpen) return
-    console.log(asideOpen)
     function handleClick () {
       setAsideOpen(false)
-      console.log('click')
     }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
