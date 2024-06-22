@@ -4,13 +4,13 @@ import { useChatContext } from '../hooks/use-chat'
 
 export const MessageList = memo(function MessageList () {
   const listRef = useRef<HTMLUListElement>(null)
-  const {messages} = useChatContext()
+  const {chat} = useChatContext()
+  const messages = chat?.messages ?? []
 
   useEffect(() => {
     if (listRef.current != null) {      
       listRef.current.scrollTo(0, listRef.current.scrollHeight)
     }
-    localStorage.setItem('messages', JSON.stringify(messages))
   }, [messages])
 
   return (

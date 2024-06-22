@@ -1,7 +1,9 @@
 import { ChatCompletionMessageParam, CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
 import { FormEvent, createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { systemMessage } from '../constants/system'
-import { Chat } from '../types/chat'
+import { Chat, ChatPreview } from '../types/chat'
+import { get, list, remove, upsert } from '../services/chat'
+import { useRoute } from 'wouter'
 
 const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
 
@@ -35,26 +37,62 @@ async function checkCompatibility(): Promise<CompatibilityCheck>{
 }
 
 function useChat () {
+  const [, params] = useRoute('/:id?')
+  const [chats, setChats] = useState<ChatPreview[]>([])
   const [chat, setChat] = useState<Chat | null>(null)
-  const [asideOpen, setAsideOpen] = useState(true)
+  const [asideOpen, setAsideOpen] = useState(false)
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
   const [progress, setProgress] = useState('-')
 
+  function loadAndSetChats () {
+    list()
+      .then(chats => {
+        return chats.map(chat => {
+          let lastUserMessage = chat.messages.reverse().find(msg => msg.role === 'user')?.content ?? 'Chat started'
+          if (typeof lastUserMessage === 'object') {
+            lastUserMessage = 'Chat started'
+          }
+          return {
+            id: chat.id,
+            lastMessage: lastUserMessage
+          }
+        })
+      })
+      .then(setChats)
+  }
+
   useEffect(() => {
-    let worker: Worker
+    if (params?.id == null) {
+      setChat(null)
+      return
+    }
+    selectChat(params.id)
+  }, [params?.id])
+
+  useEffect(() => {
+    loadAndSetChats()
+  }, [])  
+
+  useEffect(() => {
+    let cleanup = false 
+    const worker = new Worker(
+      new URL('../worker.ts', import.meta.url),
+      {
+        type: 'module'
+      }
+    )
+    let engine: WebWorkerMLCEngine | null = null;
     (async function () {
       const compatibility = await checkCompatibility()
       if (!compatibility.compatible) {
         setProgress(compatibility.message)
+        worker.terminate()
         return alert(compatibility.message)
       }
-      worker = new Worker(
-        new URL('../worker.ts', import.meta.url),
-        {
-          type: 'module'
-        }
-      )
-      const engine = await CreateWebWorkerMLCEngine(
+      if (cleanup) {
+        return
+      }
+      engine = await CreateWebWorkerMLCEngine(
         worker,
         model,
         {
@@ -63,10 +101,16 @@ function useChat () {
           }
         }
       )
+      if (cleanup) {
+        engine.unload()
+        return
+      }
       setEngine(engine)
     })()
     return () => {
-      worker?.terminate()
+      cleanup = true
+      worker.terminate()
+      engine?.unload()
       setEngine(null)
     }
   }, [])
@@ -97,17 +141,23 @@ function useChat () {
       stream: true
     })
     const replyId = crypto.randomUUID()
-    setChat(prev => {
-      return {
-        id: prev?.id ?? crypto.randomUUID(),
-        messages: [
-          ...prev?.messages ?? [],
-          { ...engineMessage, id: crypto.randomUUID() },
-          { id: replyId, role: 'assistant', content: '...' }
-        ]
-      }
-    })
+    const chatUpdated: Chat = {
+      id: chat?.id ?? crypto.randomUUID(),
+      messages: [
+        ...chat?.messages ?? [],
+        { ...engineMessage, id: crypto.randomUUID() },
+        { id: replyId, role: 'assistant', content: '...' }
+      ]
+    }
+    setChat(chatUpdated)
+    await upsert(chatUpdated)
+      .then(() => {
+        if (chat?.id == null) {
+          loadAndSetChats()
+        }
+      })
     let replyContent = ''
+    let chatState = chatUpdated
     for await (const chunk of chunks) {
       const [choice] = chunk.choices
       const content = choice?.delta.content ?? ''
@@ -116,17 +166,35 @@ function useChat () {
         if (prev == null) {
           return null
         }
-        return {
+        const newChatState: Chat = {
           ...prev,
           messages: prev.messages.map(msg => {
             return msg.id === replyId ? { ...msg, content: replyContent } : msg
           })
         }
+        chatState = newChatState
+        return newChatState
       })
     }
+    await upsert(chatState)
   }, [engine, chat])
 
-  return { messages: chat?.messages ?? [], progress, asideOpen, handleSubmit, setAsideOpen }
+  async function selectChat (id: string) {
+    const chat = await get(id)
+    if (chat != null) {
+      setChat(chat)
+    }
+  } 
+
+  async function deleteChat (id: string) {
+    await remove(id)
+      .then(loadAndSetChats)
+    if (chat?.id === id) {
+      setChat(null)
+    }
+  }
+
+  return { chats, chat, progress, asideOpen, handleSubmit, setAsideOpen, selectChat, deleteChat }
 }
 
 type ChatState = ReturnType<typeof useChat>
