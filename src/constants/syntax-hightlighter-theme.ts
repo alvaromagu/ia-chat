@@ -6,10 +6,6 @@ export const dark: { [key: string]: CSSProperties; } = {
   'code[class*="language-"]': {
     ...dracula['code[class*="language-"]'],
     fontFamily: undefined
-  },
-  'pre[class*="language-"]': {
-    ...dracula['pre[class*="language-"]'],
-    fontFamily: undefined
   }
 }
 
@@ -18,9 +14,7 @@ export const light: { [key: string]: CSSProperties; } = {
   'code[class*="language-"]': {
     ...oneLight['code[class*="language-"]'],
     fontFamily: undefined
-  },
-  'pre[class*="language-"]': {
-    ...oneLight['pre[class*="language-"]'],
-    fontFamily: undefined
   }
 }
+
+console.log({dark, light})
