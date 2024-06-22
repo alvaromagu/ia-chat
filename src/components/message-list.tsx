@@ -13,6 +13,14 @@ export const MessageList = memo(function MessageList () {
     }
   }, [messages])
 
+  if (messages.length === 0) {
+    return (
+      <div className='flex flex-1 items-center justify-center'>
+        <p className='text-gray-500'>New chat, no messages yet</p>
+      </div>
+    )
+  }
+
   return (
     <ul 
       ref={listRef}

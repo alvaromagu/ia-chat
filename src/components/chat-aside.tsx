@@ -21,7 +21,19 @@ export function ChatAside () {
       onClick={evt => evt.stopPropagation()}
       className={`bg-slate-200 dark:bg-zinc-900 p-2 w-60 flex overflow-auto flex-col gap-2 max-md:shadow-2xl max-md:bg-slate-300 max-md:dark:bg-zinc-800 max-md:transition-transform max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-10 ${asideOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}`} 
     >
-      <h2 className='text-lg font-semibold'>Chats</h2>
+      <header className='flex items-center mb-4'>
+        <h2 className='text-lg font-semibold flex-1'>Chats</h2>
+        <Link
+          href='/'
+        >
+          <svg xmlns='http://www.w3.org/2000/svg' width={24} height={24} viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth={2} strokeLinecap='round' strokeLinejoin='round'>
+            <path stroke='none' d='M0 0h24v24H0z' fill='none' />
+            <path d='M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1' />
+            <path d='M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z' />
+            <path d='M16 5l3 3' />
+          </svg>
+        </Link>
+      </header>
       <ul className='flex flex-col gap-2'>
         {chats.map((c) => (
           <li 
