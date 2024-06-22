@@ -1,10 +1,11 @@
-import { CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
+import { ChatCompletionMessageParam, CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
 import { FormEvent, createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { systemMessage } from '../constants/system'
-import { Message } from '../types/message'
+import { Chat, ChatPreview } from '../types/chat'
+import { get, list, remove, upsert } from '../services/chat'
+import { useRoute } from 'wouter'
 
 const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
-const storedMessages = JSON.parse(localStorage.getItem('messages') ?? '[]') as Message[]
 
 type CompatibilityCheck = { compatible: true } | { compatible: false, message: string }
 
@@ -36,26 +37,62 @@ async function checkCompatibility(): Promise<CompatibilityCheck>{
 }
 
 function useChat () {
-  const [asideOpen, setAsideOpen] = useState(true)
+  const [, params] = useRoute('/:id?')
+  const [chats, setChats] = useState<ChatPreview[]>([])
+  const [chat, setChat] = useState<Chat | null>(null)
+  const [asideOpen, setAsideOpen] = useState(false)
   const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
   const [progress, setProgress] = useState('-')
-  const [messages, setMessages] = useState<Message[]>(storedMessages)
+
+  function loadAndSetChats () {
+    list()
+      .then(chats => {
+        return chats.map(chat => {
+          let lastUserMessage = chat.messages.reverse().find(msg => msg.role === 'user')?.content ?? 'Chat started'
+          if (typeof lastUserMessage === 'object') {
+            lastUserMessage = 'Chat started'
+          }
+          return {
+            id: chat.id,
+            lastMessage: lastUserMessage
+          }
+        })
+      })
+      .then(setChats)
+  }
 
   useEffect(() => {
-    let worker: Worker
+    if (params?.id == null) {
+      setChat(null)
+      return
+    }
+    selectChat(params.id)
+  }, [params?.id])
+
+  useEffect(() => {
+    loadAndSetChats()
+  }, [])  
+
+  useEffect(() => {
+    let cleanup = false 
+    const worker = new Worker(
+      new URL('../worker.ts', import.meta.url),
+      {
+        type: 'module'
+      }
+    )
+    let engine: WebWorkerMLCEngine | null = null;
     (async function () {
       const compatibility = await checkCompatibility()
       if (!compatibility.compatible) {
         setProgress(compatibility.message)
+        worker.terminate()
         return alert(compatibility.message)
       }
-      worker = new Worker(
-        new URL('../worker.ts', import.meta.url),
-        {
-          type: 'module'
-        }
-      )
-      const engine = await CreateWebWorkerMLCEngine(
+      if (cleanup) {
+        return
+      }
+      engine = await CreateWebWorkerMLCEngine(
         worker,
         model,
         {
@@ -64,10 +101,16 @@ function useChat () {
           }
         }
       )
+      if (cleanup) {
+        engine.unload()
+        return
+      }
       setEngine(engine)
     })()
     return () => {
-      worker?.terminate()
+      cleanup = true
+      worker.terminate()
+      engine?.unload()
       setEngine(null)
     }
   }, [])
@@ -85,40 +128,73 @@ function useChat () {
       return alert('Message cannot be empty')
     }
     form.reset()
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: message
-      }
-    ])
+    const engineMessage: ChatCompletionMessageParam = {
+      role: 'user',
+      content: message
+    }
     const chunks = await engine.chat.completions.create({
       messages: [
         systemMessage,
-        ...messages,
-        { role: 'user', content: message }
+        ...chat?.messages ?? [],
+        engineMessage
       ],
       stream: true
     })
     const replyId = crypto.randomUUID()
-    setMessages(prev => {
-      return [...prev, { id: replyId, role: 'assistant', content: '...' }]
-    })
+    const chatUpdated: Chat = {
+      id: chat?.id ?? crypto.randomUUID(),
+      messages: [
+        ...chat?.messages ?? [],
+        { ...engineMessage, id: crypto.randomUUID() },
+        { id: replyId, role: 'assistant', content: '...' }
+      ]
+    }
+    setChat(chatUpdated)
+    await upsert(chatUpdated)
+      .then(() => {
+        if (chat?.id == null) {
+          loadAndSetChats()
+        }
+      })
     let replyContent = ''
+    let chatState = chatUpdated
     for await (const chunk of chunks) {
       const [choice] = chunk.choices
       const content = choice?.delta.content ?? ''
       replyContent += content
-      setMessages(prev => {
-        return prev.map(msg => {
-          return msg.id === replyId ? { ...msg, content: replyContent } : msg
-        })
+      setChat(prev => {
+        if (prev == null) {
+          return null
+        }
+        const newChatState: Chat = {
+          ...prev,
+          messages: prev.messages.map(msg => {
+            return msg.id === replyId ? { ...msg, content: replyContent } : msg
+          })
+        }
+        chatState = newChatState
+        return newChatState
       })
     }
-  }, [engine, messages])
+    await upsert(chatState)
+  }, [engine, chat])
 
-  return { messages, progress, asideOpen, handleSubmit, setAsideOpen }
+  async function selectChat (id: string) {
+    const chat = await get(id)
+    if (chat != null) {
+      setChat(chat)
+    }
+  } 
+
+  async function deleteChat (id: string) {
+    await remove(id)
+      .then(loadAndSetChats)
+    if (chat?.id === id) {
+      setChat(null)
+    }
+  }
+
+  return { chats, chat, progress, asideOpen, handleSubmit, setAsideOpen, selectChat, deleteChat }
 }
 
 type ChatState = ReturnType<typeof useChat>

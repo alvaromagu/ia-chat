@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@mlc-ai/web-llm": "0.2.43",
+    "clsx": "2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "9.0.1",
-    "react-syntax-highlighter": "15.5.0"
+    "react-syntax-highlighter": "15.5.0",
+    "tailwind-merge": "2.3.0",
+    "wouter": "^3.2.1"
   },
   "devDependencies": {
     "@eslint/compat": "^1.0.3",
