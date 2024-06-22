@@ -1,65 +1,18 @@
-import { ChatCompletionMessageParam, CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from '@mlc-ai/web-llm'
-import { FormEvent, createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { systemMessage } from '../constants/system'
+import { ChatCompletionMessageParam } from '@mlc-ai/web-llm'
+import { FormEvent, createContext, useContext, useEffect, useState } from 'react'
 import { Chat, ChatPreview } from '../types/chat'
-import { get, list, remove, upsert } from '../services/chat'
+import { get, listPreview, remove, upsert } from '../services/chat'
 import { useRoute } from 'wouter'
-
-const model = 'Llama-3-8B-Instruct-q4f32_1-MLC'
-
-type CompatibilityCheck = { compatible: true } | { compatible: false, message: string }
-
-// check compatibility of WebGPU API
-async function checkCompatibility(): Promise<CompatibilityCheck>{
-  if (navigator.gpu == null) {
-    return {
-      compatible: false,
-      message: 'WebGPU not supported'
-    }
-  }
-  const adapter = await navigator.gpu.requestAdapter()
-  if (adapter == null) {
-    return {
-      compatible: false,
-      message: 'No GPU adapter found'
-    }
-  }
-  const device = await adapter.requestDevice()
-  if (device == null) {
-    return {
-      compatible: false,
-      message: 'No GPU device found'
-    }
-  }
-  return {
-    compatible: true
-  }
-}
+import { useEngine } from './use-engine'
+import { parseForm } from '../utils/form'
+import { chunksReader, getChuns } from '../utils/chunks-reader'
 
 function useChat () {
   const [, params] = useRoute('/:id?')
   const [chats, setChats] = useState<ChatPreview[]>([])
   const [chat, setChat] = useState<Chat | null>(null)
   const [asideOpen, setAsideOpen] = useState(false)
-  const [engine, setEngine] = useState<WebWorkerMLCEngine | null>(null)
-  const [progress, setProgress] = useState('-')
-
-  function loadAndSetChats () {
-    list()
-      .then(chats => {
-        return chats.map(chat => {
-          let lastUserMessage = chat.messages.reverse().find(msg => msg.role === 'user')?.content ?? 'Chat started'
-          if (typeof lastUserMessage === 'object') {
-            lastUserMessage = 'Chat started'
-          }
-          return {
-            id: chat.id,
-            lastMessage: lastUserMessage
-          }
-        })
-      })
-      .then(setChats)
-  }
+  const { progress, engine } = useEngine()
 
   useEffect(() => {
     if (params?.id == null) {
@@ -70,60 +23,16 @@ function useChat () {
   }, [params?.id])
 
   useEffect(() => {
-    loadAndSetChats()
+    listPreview().then(setChats)
   }, [])  
 
-  useEffect(() => {
-    let cleanup = false 
-    const worker = new Worker(
-      new URL('../worker.ts', import.meta.url),
-      {
-        type: 'module'
-      }
-    )
-    let engine: WebWorkerMLCEngine | null = null;
-    (async function () {
-      const compatibility = await checkCompatibility()
-      if (!compatibility.compatible) {
-        setProgress(compatibility.message)
-        worker.terminate()
-        return alert(compatibility.message)
-      }
-      if (cleanup) {
-        return
-      }
-      engine = await CreateWebWorkerMLCEngine(
-        worker,
-        model,
-        {
-          initProgressCallback: (initProgress) => {
-            setProgress(initProgress.text)
-          }
-        }
-      )
-      if (cleanup) {
-        engine.unload()
-        return
-      }
-      setEngine(engine)
-    })()
-    return () => {
-      cleanup = true
-      worker.terminate()
-      engine?.unload()
-      setEngine(null)
-    }
-  }, [])
-
-  const handleSubmit = useCallback(async (evt: FormEvent) => {
+  async function handleSubmit (evt: FormEvent) {
     evt.preventDefault()
     if (engine == null) {
       return alert('Model not loaded, please wait')
     }
     const form = evt.target as HTMLFormElement
-    const formData = new FormData(form)
-    const formObj = Object.fromEntries(formData) as { message?: string }
-    const {message} = formObj
+    const {message}: { message?: string } = parseForm(form)
     if (message == null || message.trim() === '') {
       return alert('Message cannot be empty')
     }
@@ -132,14 +41,8 @@ function useChat () {
       role: 'user',
       content: message
     }
-    const chunks = await engine.chat.completions.create({
-      messages: [
-        systemMessage,
-        ...chat?.messages ?? [],
-        engineMessage
-      ],
-      stream: true
-    })
+    const messages = [...(chat?.messages ?? []), engineMessage]
+    const chunks = await getChuns({ engine, messages })
     const replyId = crypto.randomUUID()
     const chatUpdated: Chat = {
       id: chat?.id ?? crypto.randomUUID(),
@@ -151,33 +54,21 @@ function useChat () {
     }
     setChat(chatUpdated)
     await upsert(chatUpdated)
-      .then(() => {
-        if (chat?.id == null) {
-          loadAndSetChats()
-        }
-      })
-    let replyContent = ''
+    if (chat?.id == null) {
+      listPreview().then(setChats)
+    }
     let chatState = chatUpdated
-    for await (const chunk of chunks) {
-      const [choice] = chunk.choices
-      const content = choice?.delta.content ?? ''
-      replyContent += content
-      setChat(prev => {
-        if (prev == null) {
-          return null
-        }
-        const newChatState: Chat = {
-          ...prev,
-          messages: prev.messages.map(msg => {
-            return msg.id === replyId ? { ...msg, content: replyContent } : msg
-          })
-        }
-        chatState = newChatState
-        return newChatState
-      })
+    for await (const buffer of chunksReader(chunks)) {
+      chatState = {
+        ...chatState,
+        messages: chatState.messages.map(msg => {
+          return msg.id === replyId ? { ...msg, content: buffer } : msg
+        })
+      }
+      setChat(chatState)
     }
     await upsert(chatState)
-  }, [engine, chat])
+  }
 
   async function selectChat (id: string) {
     const chat = await get(id)
@@ -188,7 +79,7 @@ function useChat () {
 
   async function deleteChat (id: string) {
     await remove(id)
-      .then(loadAndSetChats)
+    listPreview().then(setChats)
     if (chat?.id === id) {
       setChat(null)
     }

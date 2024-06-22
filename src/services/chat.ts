@@ -1,9 +1,23 @@
-import { Chat } from '../types/chat'
+import { Chat, ChatPreview } from '../types/chat'
 
 export async function list (): Promise<Chat[]> {
   const json = localStorage.getItem('chats')
   const chats: Chat[] = json ? JSON.parse(json) : []
   return chats
+}
+
+export async function listPreview (): Promise<ChatPreview[]> {
+  const chats = await list()
+  return chats.map(chat => {
+    let lastUserMessage = chat.messages.reverse().find(msg => msg.role === 'user')?.content ?? 'Chat started'
+    if (typeof lastUserMessage === 'object') {
+      lastUserMessage = 'Chat started'
+    }
+    return {
+      id: chat.id,
+      lastMessage: lastUserMessage
+    }
+  })
 }
 
 export async function get (id: string): Promise<Chat | undefined> {
