@@ -4,7 +4,7 @@ export function ChatFooter () {
   const {handleSubmit} = useChatContext()
 
   return (
-  <footer>
+  <footer className='bg-slate-200 dark:bg-zinc-900'>
     <form className='flex gap-2 py-2 px-2 max-w-3xl m-auto' onSubmit={handleSubmit}>
       <textarea
         name='message'
