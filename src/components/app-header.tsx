@@ -2,11 +2,11 @@ import { Link } from 'wouter'
 import { useChatContext } from '../hooks/use-chat'
 
 export function AppHeader () {
-  const {setAsideOpen} = useChatContext()
+  const {setIsAsideOpen} = useChatContext()
 
   function handleAsideClick (evt: React.MouseEvent<HTMLElement>) {
     evt.stopPropagation()
-    setAsideOpen(prev => !prev)
+    setIsAsideOpen(prev => !prev)
   }
 
   return (

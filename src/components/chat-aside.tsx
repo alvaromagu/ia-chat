@@ -5,21 +5,21 @@ import { cn } from '../utils/cn'
 import { Link } from 'wouter'
 
 export function ChatAside () {
-  const {asideOpen, setAsideOpen, chats, chat, deleteChat} = useChatContext()
+  const {isAsideOpen, setIsAsideOpen, chats, chat, deleteChat} = useChatContext()
 
   useEffect(() => {
-    if (!asideOpen) return
+    if (!isAsideOpen) return
     function handleClick () {
-      setAsideOpen(false)
+      setIsAsideOpen(false)
     }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
-  }, [asideOpen])
+  }, [isAsideOpen])
 
   return (
     <aside 
       onClick={evt => evt.stopPropagation()}
-      className={`bg-slate-200 dark:bg-zinc-900 p-2 w-60 flex overflow-auto flex-col gap-2 max-md:shadow-2xl max-md:bg-slate-300 max-md:dark:bg-zinc-800 max-md:transition-transform max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-10 ${asideOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}`} 
+      className={`bg-slate-200 dark:bg-zinc-900 p-2 w-60 flex overflow-auto flex-col gap-2 max-md:shadow-2xl max-md:bg-slate-300 max-md:dark:bg-zinc-800 max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-10 ${isAsideOpen ? 'max-md:animate-fade-in-right' : 'max-md:animate-fade-out-left'}`} 
     >
       <header className='flex items-center mb-4'>
         <h2 className='text-lg font-semibold flex-1'>Chats</h2>

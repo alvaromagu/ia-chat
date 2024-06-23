@@ -12,6 +12,28 @@ export default {
       },
       fontFamily: {
         'onest': 'Onest'
+      },
+      keyframes: {
+        'fade-in-right': {
+          '0%': {
+            transform: 'translateX(-100%)'
+          },
+          '100%': {
+            transform: 'translateX(0)'
+          }
+        },
+        'fade-out-left': {
+          '0%': {
+            transform: 'translateX(0)'
+          },
+          '100%': {
+            transform: 'translateX(-100%)'
+          }
+        }
+      },
+      animation: {
+        'fade-in-right': 'fade-in-right 0.5s ease-out forwards',
+        'fade-out-left': 'fade-out-left 0.5s ease-out forwards'
       }
     }
   },

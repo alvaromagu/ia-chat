@@ -6,12 +6,13 @@ import { useRoute } from 'wouter'
 import { useEngine } from './use-engine'
 import { parseForm } from '../utils/form'
 import { chunksReader, getChuns } from '../utils/chunks-reader'
+import { useAside } from './use-aside'
 
 function useChat () {
   const [, params] = useRoute('/:id?')
   const [chats, setChats] = useState<ChatPreview[]>([])
   const [chat, setChat] = useState<Chat | null>(null)
-  const [asideOpen, setAsideOpen] = useState(false)
+  const { isAsideOpen, setIsAsideOpen } = useAside()
   const { progress, engine } = useEngine()
 
   useEffect(() => {
@@ -85,7 +86,7 @@ function useChat () {
     }
   }
 
-  return { chats, chat, progress, asideOpen, handleSubmit, setAsideOpen, selectChat, deleteChat }
+  return { chats, chat, progress, isAsideOpen, handleSubmit, setIsAsideOpen, selectChat, deleteChat }
 }
 
 type ChatState = ReturnType<typeof useChat>
