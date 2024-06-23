@@ -8,7 +8,7 @@ export function Chat () {
   return (
     <div className='flex gap-2 p-2 flex-1 overflow-auto'>
       <ChatAside />
-      <main className='flex flex-col gap-2 flex-1 overflow-auto max-w-3xl mx-auto'>
+      <main className='flex flex-col gap-2 flex-1 overflow-auto'>
         <AppHeader />
         <MessageList />
         <ChatFooter />
