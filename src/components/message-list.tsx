@@ -15,7 +15,7 @@ export const MessageList = memo(function MessageList () {
 
   if (messages.length === 0) {
     return (
-      <div className='flex flex-1 items-center justify-center'>
+      <div className='flex flex-1 items-center justify-center overflow-auto w-full max-w-3xl mx-auto'>
         <p className='text-gray-500'>New chat, no messages yet</p>
       </div>
     )
@@ -24,7 +24,7 @@ export const MessageList = memo(function MessageList () {
   return (
     <ul 
       ref={listRef}
-      className='flex flex-col flex-1 rounded p-2 gap-4 scroll-smooth bg-slate-200 dark:bg-zinc-900 overflow-auto w-full max-w-3xl mx-auto'
+      className='flex flex-col flex-1 rounded p-2 gap-4 scroll-smooth overflow-auto w-full max-w-3xl mx-auto'
     >
       {messages.map((message) => {
         return (

@@ -8,12 +8,16 @@ export function Chat () {
   return (
     <div className='flex gap-2 p-2 flex-1 overflow-auto'>
       <ChatAside />
-      <main className='flex flex-col gap-2 flex-1 overflow-auto'>
+      <div className='flex flex-col gap-2 flex-1 overflow-auto'>
         <AppHeader />
-        <MessageList />
-        <ChatFooter />
+        <main className='flex flex-col gap-2 flex-1 overflow-auto bg-slate-200 dark:bg-zinc-900'>
+          <div className='overflow-y-auto flex-1'>
+            <MessageList />
+          </div>
+          <ChatFooter />
+        </main>
         <AppFooter />
-      </main>
+      </div>
     </div>
   )
 }
